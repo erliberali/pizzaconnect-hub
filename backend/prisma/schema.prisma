@@ -1,0 +1,174 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PizzariaStatus {
+  ativa
+  inativa
+  suspensa
+}
+
+enum UserRole {
+  super_admin
+  admin_pizzaria
+  gestor
+  operacao
+  financeiro
+  leitura
+}
+
+enum PedidoStatus {
+  novo
+  confirmado
+  em_preparo
+  pronto
+  saiu_entrega
+  entregue
+  cancelado
+}
+
+enum PedidoCanal {
+  delivery
+  mesa
+  balcao
+  retirada
+}
+
+enum EventoStatus {
+  received
+  processing
+  processed
+  failed
+}
+
+model Pizzaria {
+  id         String         @id @default(uuid())
+  nome       String
+  endereco   String?
+  telefone   String?
+  status     PizzariaStatus @default(ativa)
+  created_at DateTime       @default(now())
+
+  memberships       UsuarioPizzaria[]
+  credenciais       IntegracaoCredencial[]
+  eventos           EventoIntegracao[]
+  pedidos           Pedido[]
+}
+
+model Usuario {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  nome          String
+  password_hash String
+  created_at    DateTime @default(now())
+
+  memberships UsuarioPizzaria[]
+}
+
+model UsuarioPizzaria {
+  id          String   @id @default(uuid())
+  user_id     String
+  pizzaria_id String
+  role        UserRole
+
+  usuario  Usuario  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  pizzaria Pizzaria @relation(fields: [pizzaria_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, pizzaria_id])
+}
+
+model IntegracaoCredencial {
+  id                        String    @id @default(uuid())
+  pizzaria_id               String
+  origem                    String    @default("cardapioweb")
+  estabelecimento_externo_id String
+  api_key_encrypted         String?
+  partner_key_encrypted     String?
+  webhook_secret            String?
+  ativo                     Boolean   @default(true)
+  last_sync_at              DateTime?
+  created_at                DateTime  @default(now())
+
+  pizzaria Pizzaria           @relation(fields: [pizzaria_id], references: [id], onDelete: Cascade)
+  eventos  EventoIntegracao[]
+
+  @@unique([origem, estabelecimento_externo_id])
+}
+
+model EventoIntegracao {
+  id                    String       @id @default(uuid())
+  pizzaria_id           String
+  credencial_id         String?
+  origem                String       @default("cardapioweb")
+  tipo_evento           String
+  event_external_id     String?
+  resource_type         String?
+  resource_external_id  String?
+  payload_raw           Json?
+  payload_hash          String?
+  received_at           DateTime     @default(now())
+  processed_at          DateTime?
+  status                EventoStatus @default(received)
+  error_message         String?
+
+  pizzaria   Pizzaria              @relation(fields: [pizzaria_id], references: [id], onDelete: Cascade)
+  credencial IntegracaoCredencial? @relation(fields: [credencial_id], references: [id])
+
+  @@unique([pizzaria_id, origem, event_external_id])
+}
+
+model Pedido {
+  id                 String       @id @default(uuid())
+  pizzaria_id        String
+  origem             String       @default("cardapioweb")
+  external_key       String
+  pedido_externo_id  String
+  status             PedidoStatus @default(novo)
+  canal              PedidoCanal  @default(delivery)
+  cliente_nome       String?
+  cliente_telefone   String?
+  total_bruto        Decimal      @db.Decimal(12, 2)
+  descontos          Decimal      @default(0) @db.Decimal(12, 2)
+  taxas              Decimal      @default(0) @db.Decimal(12, 2)
+  total_liquido      Decimal      @db.Decimal(12, 2)
+  created_at_origem  DateTime?
+  updated_at_origem  DateTime?
+  created_at         DateTime     @default(now())
+  updated_at         DateTime     @updatedAt
+
+  pizzaria Pizzaria     @relation(fields: [pizzaria_id], references: [id], onDelete: Cascade)
+  itens    PedidoItem[]
+
+  @@unique([pizzaria_id, origem, pedido_externo_id])
+  @@index([pizzaria_id, status])
+  @@index([pizzaria_id, created_at_origem])
+}
+
+model PedidoItem {
+  id                  String   @id @default(uuid())
+  pedido_id           String
+  sku_externo_id      String?
+  produto_externo_id  String?
+  descricao           String
+  qtd                 Int
+  preco_unit          Decimal  @db.Decimal(10, 2)
+  total               Decimal  @db.Decimal(10, 2)
+  observacoes         String?
+  modificadores       Json?
+
+  pedido Pedido @relation(fields: [pedido_id], references: [id], onDelete: Cascade)
+}
+
+model StatusMap {
+  id               String @id @default(uuid())
+  origem           String
+  status_externo   String
+  status_canonico  String
+
+  @@unique([origem, status_externo])
+}

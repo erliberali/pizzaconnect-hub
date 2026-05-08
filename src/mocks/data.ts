@@ -7,7 +7,7 @@ import type {
 export const mockPizzarias: Pizzaria[] = [
   {
     id: 'pz-001',
-    nome: 'Pizzaria Bella Napoli',
+    nome: 'Peché Pizzaria',
     endereco: 'Rua das Flores, 123 - Centro',
     telefone: '(11) 3456-7890',
     status: 'ativa',
@@ -15,7 +15,7 @@ export const mockPizzarias: Pizzaria[] = [
   },
   {
     id: 'pz-002',
-    nome: 'Pizzaria Forno & Brasa',
+    nome: 'Mozzarella Mais',
     endereco: 'Av. Brasil, 456 - Jardins',
     telefone: '(11) 3456-1234',
     status: 'ativa',
@@ -26,8 +26,8 @@ export const mockPizzarias: Pizzaria[] = [
 // ========== USERS ==========
 export const mockUsers: User[] = [
   { id: 'usr-001', email: 'admin@gestao.com', nome: 'Carlos Admin', created_at: '2024-01-01T00:00:00Z' },
-  { id: 'usr-002', email: 'gestor@bellanapoli.com', nome: 'Ana Gestora', created_at: '2024-01-10T00:00:00Z' },
-  { id: 'usr-003', email: 'ops@fornobrasa.com', nome: 'João Operação', created_at: '2024-02-05T00:00:00Z' },
+  { id: 'usr-002', email: 'gestor@peche.com.br', nome: 'Ana Gestora', created_at: '2024-01-10T00:00:00Z' },
+  { id: 'usr-003', email: 'ops@mozzarellamais.com.br', nome: 'João Operação', created_at: '2024-02-05T00:00:00Z' },
   { id: 'usr-004', email: 'fin@gestao.com', nome: 'Maria Financeiro', created_at: '2024-03-01T00:00:00Z' },
 ];
 
