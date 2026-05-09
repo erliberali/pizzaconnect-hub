@@ -1,13 +1,14 @@
-import { useMemo, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useTenant } from '@/contexts/TenantContext';
-import { mockPedidos } from '@/mocks/data';
+import { usePedidos } from '@/hooks/usePedidos';
 import type { Pedido, PedidoStatus, PedidoCanal } from '@/types';
 import { Search, Eye } from 'lucide-react';
 
@@ -45,20 +46,12 @@ export default function Pedidos() {
   const [filterCanal, setFilterCanal] = useState<string>('all');
   const [selectedPedido, setSelectedPedido] = useState<Pedido | null>(null);
 
-  const pedidos = useMemo(() => {
-    let list = isConsolidated ? mockPedidos : mockPedidos.filter(p => p.pizzaria_id === currentPizzaria?.id);
-    if (filterStatus !== 'all') list = list.filter(p => p.status === filterStatus);
-    if (filterCanal !== 'all') list = list.filter(p => p.canal === filterCanal);
-    if (search) {
-      const q = search.toLowerCase();
-      list = list.filter(p =>
-        p.pedido_externo_id.toLowerCase().includes(q) ||
-        p.cliente_nome?.toLowerCase().includes(q) ||
-        p.external_key.toLowerCase().includes(q)
-      );
-    }
-    return list.sort((a, b) => new Date(b.created_at_origem).getTime() - new Date(a.created_at_origem).getTime());
-  }, [currentPizzaria, isConsolidated, search, filterStatus, filterCanal]);
+  const { data: pedidos = [], isLoading, error } = usePedidos({
+    pizzariaId: isConsolidated ? null : currentPizzaria?.id,
+    filterStatus,
+    filterCanal,
+    search,
+  });
 
   const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   const fmtDate = (d: string) => new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -67,7 +60,9 @@ export default function Pedidos() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-display font-bold">Pedidos</h1>
-        <p className="text-sm text-muted-foreground mt-1">{pedidos.length} pedidos encontrados</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          {isLoading ? 'Carregando...' : `${pedidos.length} pedidos encontrados`}
+        </p>
       </div>
 
       {/* Filters */}
@@ -92,6 +87,10 @@ export default function Pedidos() {
         </Select>
       </div>
 
+      {error && (
+        <p className="text-sm text-destructive">Erro ao carregar pedidos: {(error as Error).message}</p>
+      )}
+
       {/* Table */}
       <Card>
         <CardContent className="p-0">
@@ -108,21 +107,30 @@ export default function Pedidos() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {pedidos.slice(0, 50).map(p => (
-                <TableRow key={p.id}>
-                  <TableCell className="font-mono text-xs">{p.pedido_externo_id}</TableCell>
-                  <TableCell>{p.cliente_nome ?? '-'}</TableCell>
-                  <TableCell><Badge variant="outline">{canalLabel[p.canal]}</Badge></TableCell>
-                  <TableCell><Badge variant={statusVariant[p.status]}>{statusLabel[p.status]}</Badge></TableCell>
-                  <TableCell className="text-right font-medium">{fmt(p.total_liquido)}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{fmtDate(p.created_at_origem)}</TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="icon" onClick={() => setSelectedPedido(p)}>
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {isLoading
+                ? Array.from({ length: 8 }).map((_, i) => (
+                    <TableRow key={i}>
+                      {Array.from({ length: 7 }).map((_, j) => (
+                        <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                : pedidos.map(p => (
+                    <TableRow key={p.id}>
+                      <TableCell className="font-mono text-xs">{p.pedido_externo_id}</TableCell>
+                      <TableCell>{p.cliente_nome ?? '-'}</TableCell>
+                      <TableCell><Badge variant="outline">{canalLabel[p.canal]}</Badge></TableCell>
+                      <TableCell><Badge variant={statusVariant[p.status]}>{statusLabel[p.status]}</Badge></TableCell>
+                      <TableCell className="text-right font-medium">{fmt(p.total_liquido)}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{fmtDate(p.created_at_origem)}</TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="icon" onClick={() => setSelectedPedido(p)}>
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+              }
             </TableBody>
           </Table>
         </CardContent>
@@ -147,8 +155,8 @@ export default function Pedidos() {
               <div>
                 <h4 className="font-medium mb-2">Itens</h4>
                 <div className="space-y-2">
-                  {selectedPedido.itens?.map(item => (
-                    <div key={item.id} className="flex justify-between items-center text-sm p-2 rounded-md bg-muted">
+                  {selectedPedido.itens?.map((item, i) => (
+                    <div key={item.id ?? i} className="flex justify-between items-center text-sm p-2 rounded-md bg-muted">
                       <div>
                         <p className="font-medium">{item.descricao}</p>
                         <p className="text-xs text-muted-foreground">{item.qtd}x {fmt(item.preco_unit)}</p>
@@ -160,7 +168,7 @@ export default function Pedidos() {
               </div>
               <div className="border-t pt-3 space-y-1 text-sm">
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{fmt(selectedPedido.total_bruto)}</span></div>
-                {selectedPedido.descontos > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Descontos</span><span className="text-success">-{fmt(selectedPedido.descontos)}</span></div>}
+                {selectedPedido.descontos > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Descontos</span><span className="text-green-600">-{fmt(selectedPedido.descontos)}</span></div>}
                 {selectedPedido.taxas > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Taxas</span><span>{fmt(selectedPedido.taxas)}</span></div>}
                 <div className="flex justify-between font-bold text-base"><span>Total</span><span>{fmt(selectedPedido.total_liquido)}</span></div>
               </div>

@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTenant } from '@/contexts/TenantContext';
-import { mockPizzarias } from '@/mocks/data';
+import { usePizzarias } from '@/hooks/usePizzarias';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,13 +23,10 @@ const navItems = [
 ];
 
 export function AppSidebar() {
-  const { user, logout, memberships } = useAuth();
+  const { user, logout } = useAuth();
   const { currentPizzaria, setCurrentPizzaria, isConsolidated } = useTenant();
   const location = useLocation();
-
-  const userPizzarias = memberships
-    .map(m => mockPizzarias.find(p => p.id === m.pizzaria_id)!)
-    .filter(Boolean);
+  const { data: userPizzarias = [] } = usePizzarias();
 
   return (
     <aside className="flex flex-col w-64 min-h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
