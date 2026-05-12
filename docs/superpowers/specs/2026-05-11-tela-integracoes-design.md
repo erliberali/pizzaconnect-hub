@@ -208,6 +208,7 @@ Frontend esconde/desabilita botões; RLS no Supabase é a barreira real.
 - **AES-256 real para `api_key_encrypted`**: pgsodium ou Supabase Vault.
 - **Botão "Testar conexão"**: edge function leve que valida API key contra `/orders/history`.
 - **Cancelamento de job em andamento**: campo `cancel_requested` + verificação no worker entre páginas.
+- **Endurecer RLS cross-tenant**: hoje `sync_job`, `pedido` e `integracao_credencial` usam `USING (true)` pra `anon`, dependendo do filtro do client para isolar tenants. Após auth real (Supabase Auth), trocar para `USING (pizzaria_id IN (SELECT pizzaria_id FROM usuario_pizzaria WHERE user_id = auth.uid()))` em todas essas tabelas. Aplicável também ao `INSERT` em `sync_job` (validar `pizzaria_id` no `WITH CHECK`) e à FK opcional `created_by → usuario(id)`.
 
 ## Arquivos afetados
 

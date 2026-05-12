@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -1387,7 +1387,7 @@ export type Database = {
           periodo_fim: string
           periodo_inicio: string
           pizzaria_id: string
-          processed_count: number | null
+          processed_count: number
           started_at: string | null
           status: Database["public"]["Enums"]["sync_job_status"]
           total_count: number | null
@@ -1407,7 +1407,7 @@ export type Database = {
           periodo_fim: string
           periodo_inicio: string
           pizzaria_id: string
-          processed_count?: number | null
+          processed_count?: number
           started_at?: string | null
           status?: Database["public"]["Enums"]["sync_job_status"]
           total_count?: number | null
@@ -1427,7 +1427,7 @@ export type Database = {
           periodo_fim?: string
           periodo_inicio?: string
           pizzaria_id?: string
-          processed_count?: number | null
+          processed_count?: number
           started_at?: string | null
           status?: Database["public"]["Enums"]["sync_job_status"]
           total_count?: number | null
@@ -1829,4 +1829,3 @@ export const Constants = {
     },
   },
 } as const
-
