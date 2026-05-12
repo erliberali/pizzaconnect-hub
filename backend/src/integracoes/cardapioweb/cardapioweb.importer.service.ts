@@ -16,6 +16,8 @@ export interface ImportResult {
   importados: number;
   atualizados: number;
   erros: number;
+  totalCountFinal?: number;
+  totalPagesFinal?: number;
 }
 
 // Quantos dias atrás buscar quando não há last_sync_at
@@ -123,10 +125,11 @@ export class CardapioWebImporterService {
     let importados = 0;
     let atualizados = 0;
     let erros = 0;
-    let processed = 0;
-    let totalCount = 0;
-    let totalPages = 0;
     let pageGlobal = 0;
+
+    let processedOffset = 0;
+    let totalCountOffset = 0;
+    let totalPagesOffset = 0;
 
     for (const chunk of this.gerarChunksmensais(inicio, fim)) {
       const r = await this.importarChunkComProgresso(
@@ -136,15 +139,12 @@ export class CardapioWebImporterService {
         chunk.fim,
         async (pageInfo) => {
           pageGlobal++;
-          totalPages = Math.max(totalPages, pageInfo.totalPagesAcumulado);
-          totalCount = Math.max(totalCount, pageInfo.totalCountAcumulado);
-          processed = pageInfo.processedAcumulado;
           if (onProgress) {
             await onProgress({
               current_page: pageGlobal,
-              total_pages: totalPages,
-              processed_count: processed,
-              total_count: totalCount,
+              total_pages: totalPagesOffset + pageInfo.totalPagesAcumulado,
+              processed_count: processedOffset + pageInfo.processedAcumulado,
+              total_count: totalCountOffset + pageInfo.totalCountAcumulado,
             });
           }
         },
@@ -152,6 +152,10 @@ export class CardapioWebImporterService {
       importados += r.importados;
       atualizados += r.atualizados;
       erros += r.erros;
+      // Ao fim do chunk, fixa os offsets para o próximo chunk usar como base
+      processedOffset += r.importados + r.atualizados + r.erros;
+      totalCountOffset += r.totalCountFinal ?? 0;
+      totalPagesOffset += r.totalPagesFinal ?? 0;
       await this.sleep(2000);
     }
 
@@ -232,6 +236,9 @@ export class CardapioWebImporterService {
         historico = result.items;
         totalPages = result.pagination.total_pages;
         totalCount = result.pagination.total_orders ?? totalCount;
+        this.logger.log(
+          `[${cwCred.estabelecimento_externo_id}] ${this.formatarData(inicio)}→${this.formatarData(fim)} p${page}/${totalPages}: ${historico.length} pedido(s)`,
+        );
       } catch (err) {
         this.logger.error(`Falha history p${page}: ${err.message}`);
         erros++;
@@ -241,7 +248,7 @@ export class CardapioWebImporterService {
       for (const item of historico) {
         try {
           const order: CwOrder = await this.cwClient.getOrder(cwCred, item.id);
-          const wasUpdate = await this.upsertPedidoReturnAction(order, pizzariaId);
+          const wasUpdate = await this.upsertPedido(order, pizzariaId);
           if (wasUpdate) atualizados++;
           else importados++;
           processed++;
@@ -262,32 +269,10 @@ export class CardapioWebImporterService {
       if (page <= totalPages) await this.sleep(2000);
     } while (page <= totalPages);
 
-    return { importados, atualizados, erros };
+    return { importados, atualizados, erros, totalCountFinal: totalCount, totalPagesFinal: totalPages };
   }
 
-  private async upsertPedido(order: CwOrder, pizzariaId: string) {
-    const { pedido, itens } = mapOrderParaCanonico(order, pizzariaId);
-
-    const { data: saved, error } = await this.supabase.db
-      .from('pedido')
-      .upsert(pedido as any, {
-        onConflict: 'pizzaria_id,origem,pedido_externo_id',
-        ignoreDuplicates: false,
-      })
-      .select('id')
-      .single();
-
-    if (error) throw error;
-
-    if (itens.length > 0 && saved) {
-      await this.supabase.db.from('pedido_item').delete().eq('pedido_id', saved.id);
-      await this.supabase.db.from('pedido_item').insert(
-        itens.map((item) => ({ ...item, pedido_id: saved.id })),
-      );
-    }
-  }
-
-  private async upsertPedidoReturnAction(order: CwOrder, pizzariaId: string): Promise<boolean> {
+  private async upsertPedido(order: CwOrder, pizzariaId: string): Promise<boolean> {
     const { pedido, itens } = mapOrderParaCanonico(order, pizzariaId);
 
     const { data: existing } = await this.supabase.db
