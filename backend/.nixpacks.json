@@ -1,0 +1,11 @@
+{
+  "phases": {
+    "setup": {
+      "cmds": ["npm ci --include=dev"]
+    },
+    "build": {
+      "cmds": ["npm run build"]
+    }
+  },
+  "start": "npm run start"
+}
