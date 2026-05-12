@@ -87,6 +87,7 @@ export class SyncWorkerService implements OnModuleInit {
           imported_count: result.importados,
           updated_count: result.atualizados,
           error_count: result.erros,
+          processed_count: result.importados + result.atualizados + result.erros,
         })
         .eq('id', job.id);
 

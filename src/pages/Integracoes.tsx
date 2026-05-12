@@ -44,6 +44,7 @@ export default function Integracoes() {
 
   const podeEditar = role === 'super_admin' || role === 'admin_pizzaria';
   const podeCriar = role === 'super_admin';
+  const podeSync = role === 'super_admin' || role === 'admin_pizzaria';
 
   const { data: credenciais = [] } = useCredenciais(pizzariaId);
   const { data: jobs = [] } = useSyncJobs({ pizzariaId });
@@ -113,7 +114,7 @@ export default function Integracoes() {
                           <Pencil className="w-3.5 h-3.5 mr-1" /> Editar
                         </Button>
                       )}
-                      {cred.ativo && (
+                      {podeSync && cred.ativo && (
                         <Button size="sm" onClick={() => setSyncDialog({ open: true, credencialId: cred.id })}>
                           <RefreshCw className="w-3.5 h-3.5 mr-1" /> Sincronizar
                         </Button>
@@ -129,9 +130,11 @@ export default function Integracoes() {
         {/* ---------- Sincronizações ---------- */}
         <TabsContent value="sincronizacoes" className="space-y-4">
           <div className="flex justify-end">
-            <Button onClick={() => setSyncDialog({ open: true })}>
-              <Plus className="w-4 h-4 mr-1" /> Nova sincronização
-            </Button>
+            {podeSync && (
+              <Button onClick={() => setSyncDialog({ open: true })}>
+                <Plus className="w-4 h-4 mr-1" /> Nova sincronização
+              </Button>
+            )}
           </div>
 
           {workerOffline && (
