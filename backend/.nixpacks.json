@@ -1,10 +1,7 @@
 {
   "phases": {
-    "install": {
-      "cmds": ["npm ci --include=dev"]
-    },
     "build": {
-      "cmds": ["npm run build"]
+      "cmds": ["npm ci", "npm run build"]
     }
   },
   "start": "npm run start"
