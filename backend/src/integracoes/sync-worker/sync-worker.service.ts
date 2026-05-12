@@ -40,7 +40,7 @@ export class SyncWorkerService implements OnModuleInit {
     // Usa RPC porque supabase-js não suporta SELECT FOR UPDATE diretamente.
     // Alternativa: chamada SQL via .rpc('claim_sync_job').
     // Para esta iteração, fazemos a estratégia "update returning" otimista.
-    const { data, error } = await (this.supabase.db.rpc as any)('claim_sync_job');
+    const { data, error } = await this.supabase.db.rpc('claim_sync_job');
     if (error) {
       this.logger.error(`claim_sync_job: ${error.message}`);
       return null;
@@ -56,15 +56,19 @@ export class SyncWorkerService implements OnModuleInit {
       const now = Date.now();
       if (now - lastProgressAt < PROGRESS_DEBOUNCE_MS) return;
       lastProgressAt = now;
-      await this.supabase.db
-        .from('sync_job')
-        .update({
-          current_page: p.current_page,
-          total_pages: p.total_pages,
-          processed_count: p.processed_count,
-          total_count: p.total_count,
-        })
-        .eq('id', job.id);
+      try {
+        await this.supabase.db
+          .from('sync_job')
+          .update({
+            current_page: p.current_page,
+            total_pages: p.total_pages,
+            processed_count: p.processed_count,
+            total_count: p.total_count,
+          })
+          .eq('id', job.id);
+      } catch (e: any) {
+        this.logger.warn(`Job ${job.id}: falha ao atualizar progresso: ${e?.message ?? e}`);
+      }
     };
 
     try {
