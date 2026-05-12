@@ -44,13 +44,13 @@ export const mockMemberships: UserMembership[] = [
 export const mockCredenciais: IntegracaoCredencial[] = [
   {
     id: 'cred-001', pizzaria_id: 'pz-001', origem: 'cardapioweb',
-    estabelecimento_externo_id: 'CW-EST-1001', token_encrypted: '***encrypted***',
+    estabelecimento_externo_id: 'CW-EST-1001', api_key_encrypted: '***encrypted***',
     webhook_secret: 'whsec_abc123', ativo: true, last_sync_at: '2025-03-09T14:30:00Z',
     created_at: '2024-01-20T00:00:00Z',
   },
   {
     id: 'cred-002', pizzaria_id: 'pz-002', origem: 'cardapioweb',
-    estabelecimento_externo_id: 'CW-EST-2002', token_encrypted: '***encrypted***',
+    estabelecimento_externo_id: 'CW-EST-2002', api_key_encrypted: '***encrypted***',
     webhook_secret: 'whsec_def456', ativo: true, last_sync_at: '2025-03-09T14:25:00Z',
     created_at: '2024-02-10T00:00:00Z',
   },

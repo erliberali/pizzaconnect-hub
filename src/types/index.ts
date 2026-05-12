@@ -35,10 +35,11 @@ export interface IntegracaoCredencial {
   pizzaria_id: string;
   origem: 'cardapioweb';
   estabelecimento_externo_id: string;
-  token_encrypted: string;
-  webhook_secret?: string;
+  api_key_encrypted: string | null;
+  partner_key_encrypted?: string | null;
+  webhook_secret?: string | null;
   ativo: boolean;
-  last_sync_at?: string;
+  last_sync_at?: string | null;
   created_at: string;
 }
 
@@ -94,6 +95,29 @@ export interface PedidoItem {
   total: number;
   observacoes?: string;
   modificadores?: Record<string, unknown>;
+}
+
+export type SyncJobStatus = 'queued' | 'running' | 'completed' | 'failed';
+
+export interface SyncJob {
+  id: string;
+  credencial_id: string;
+  pizzaria_id: string;
+  periodo_inicio: string; // YYYY-MM-DD
+  periodo_fim: string;
+  status: SyncJobStatus;
+  total_pages: number | null;
+  current_page: number | null;
+  total_count: number | null;
+  processed_count: number;
+  imported_count: number;
+  updated_count: number;
+  error_count: number;
+  error_message: string | null;
+  created_by: string | null;
+  created_at: string;
+  started_at: string | null;
+  finished_at: string | null;
 }
 
 // Dashboard KPIs
