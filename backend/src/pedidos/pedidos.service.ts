@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../common/supabase/supabase.service';
-import type { PedidoStatus, PedidoCanal } from '../common/supabase/database.types';
+import type { PedidoStatus, PedidoCanal } from '../common/supabase/database-aliases';
 
 export interface FiltrosPedidos {
   pizzaria_id?: string;

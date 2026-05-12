@@ -1,4 +1,4 @@
-import type { PedidoStatus, PedidoCanal } from '../../common/supabase/database.types';
+import type { PedidoStatus, PedidoCanal } from '../../common/supabase/database-aliases';
 import type { CwOrder } from './cardapioweb.types';
 
 // Status reais retornados pela API CardapioWeb
