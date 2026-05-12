@@ -5,6 +5,19 @@ import { CardapioWebClient } from './cardapioweb.client';
 import { mapOrderParaCanonico } from './cardapioweb.mapper';
 import type { CwCredencial, CwOrder } from './cardapioweb.types';
 
+export interface ImportProgress {
+  current_page: number;
+  total_pages: number;
+  processed_count: number;
+  total_count: number;
+}
+
+export interface ImportResult {
+  importados: number;
+  atualizados: number;
+  erros: number;
+}
+
 // Quantos dias atrás buscar quando não há last_sync_at
 const DIAS_HISTORICO_INICIAL = 10;
 
@@ -88,6 +101,63 @@ export class CardapioWebImporterService {
     return { importados, erros };
   }
 
+  async importarPeriodo(
+    credencialId: string,
+    inicio: Date,
+    fim: Date,
+    onProgress?: (p: ImportProgress) => void | Promise<void>,
+  ): Promise<ImportResult> {
+    const { data: cred, error: credErr } = await this.supabase.db
+      .from('integracao_credencial')
+      .select('*')
+      .eq('id', credencialId)
+      .single();
+
+    if (credErr || !cred) throw new Error(`Credencial não encontrada: ${credencialId}`);
+
+    const cwCred: CwCredencial = {
+      estabelecimento_externo_id: cred.estabelecimento_externo_id,
+      api_key: this.descriptografar(cred.api_key_encrypted ?? ''),
+    };
+
+    let importados = 0;
+    let atualizados = 0;
+    let erros = 0;
+    let processed = 0;
+    let totalCount = 0;
+    let totalPages = 0;
+    let pageGlobal = 0;
+
+    for (const chunk of this.gerarChunksmensais(inicio, fim)) {
+      const r = await this.importarChunkComProgresso(
+        cwCred,
+        cred.pizzaria_id,
+        chunk.inicio,
+        chunk.fim,
+        async (pageInfo) => {
+          pageGlobal++;
+          totalPages = Math.max(totalPages, pageInfo.totalPagesAcumulado);
+          totalCount = Math.max(totalCount, pageInfo.totalCountAcumulado);
+          processed = pageInfo.processedAcumulado;
+          if (onProgress) {
+            await onProgress({
+              current_page: pageGlobal,
+              total_pages: totalPages,
+              processed_count: processed,
+              total_count: totalCount,
+            });
+          }
+        },
+      );
+      importados += r.importados;
+      atualizados += r.atualizados;
+      erros += r.erros;
+      await this.sleep(2000);
+    }
+
+    return { importados, atualizados, erros };
+  }
+
   private async importarChunk(
     cwCred: CwCredencial,
     pizzariaId: string,
@@ -136,6 +206,65 @@ export class CardapioWebImporterService {
     return { importados, erros };
   }
 
+  private async importarChunkComProgresso(
+    cwCred: CwCredencial,
+    pizzariaId: string,
+    inicio: Date,
+    fim: Date,
+    onPage: (info: {
+      totalPagesAcumulado: number;
+      totalCountAcumulado: number;
+      processedAcumulado: number;
+    }) => void | Promise<void>,
+  ): Promise<ImportResult> {
+    let importados = 0;
+    let atualizados = 0;
+    let erros = 0;
+    let processed = 0;
+    let page = 1;
+    let totalPages = 1;
+    let totalCount = 0;
+
+    do {
+      let historico: import('./cardapioweb.types').CwHistoryItem[];
+      try {
+        const result = await this.pollHistoryComRetry(cwCred, inicio, fim, page);
+        historico = result.items;
+        totalPages = result.pagination.total_pages;
+        totalCount = result.pagination.total_orders ?? totalCount;
+      } catch (err) {
+        this.logger.error(`Falha history p${page}: ${err.message}`);
+        erros++;
+        break;
+      }
+
+      for (const item of historico) {
+        try {
+          const order: CwOrder = await this.cwClient.getOrder(cwCred, item.id);
+          const wasUpdate = await this.upsertPedidoReturnAction(order, pizzariaId);
+          if (wasUpdate) atualizados++;
+          else importados++;
+          processed++;
+        } catch (err) {
+          this.logger.error(`Erro order ${item.id}: ${err.message}`);
+          erros++;
+        }
+        await this.sleep(300);
+      }
+
+      await onPage({
+        totalPagesAcumulado: totalPages,
+        totalCountAcumulado: totalCount,
+        processedAcumulado: processed,
+      });
+
+      page++;
+      if (page <= totalPages) await this.sleep(2000);
+    } while (page <= totalPages);
+
+    return { importados, atualizados, erros };
+  }
+
   private async upsertPedido(order: CwOrder, pizzariaId: string) {
     const { pedido, itens } = mapOrderParaCanonico(order, pizzariaId);
 
@@ -156,6 +285,40 @@ export class CardapioWebImporterService {
         itens.map((item) => ({ ...item, pedido_id: saved.id })),
       );
     }
+  }
+
+  private async upsertPedidoReturnAction(order: CwOrder, pizzariaId: string): Promise<boolean> {
+    const { pedido, itens } = mapOrderParaCanonico(order, pizzariaId);
+
+    const { data: existing } = await this.supabase.db
+      .from('pedido')
+      .select('id')
+      .eq('pizzaria_id', pizzariaId)
+      .eq('origem', pedido.origem)
+      .eq('pedido_externo_id', pedido.pedido_externo_id)
+      .maybeSingle();
+
+    const wasUpdate = !!existing;
+
+    const { data: saved, error } = await this.supabase.db
+      .from('pedido')
+      .upsert(pedido as any, {
+        onConflict: 'pizzaria_id,origem,pedido_externo_id',
+        ignoreDuplicates: false,
+      })
+      .select('id')
+      .single();
+
+    if (error) throw error;
+
+    if (itens.length > 0 && saved) {
+      await this.supabase.db.from('pedido_item').delete().eq('pedido_id', saved.id);
+      await this.supabase.db.from('pedido_item').insert(
+        itens.map((item) => ({ ...item, pedido_id: saved.id })),
+      );
+    }
+
+    return wasUpdate;
   }
 
   private async pollHistoryComRetry(
