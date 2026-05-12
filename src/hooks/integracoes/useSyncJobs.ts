@@ -25,11 +25,11 @@ export function useSyncJobs(params: { pizzariaId?: string | null; credencialId?:
     const channel = supabase
       .channel(`sync-jobs-${pizzariaId ?? 'all'}-${credencialId ?? 'all'}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sync_job' }, () => {
-        qc.invalidateQueries({ queryKey });
+        qc.invalidateQueries({ queryKey: ['sync-jobs'] });
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [pizzariaId, credencialId, qc, queryKey.join(',')]);
+  }, [pizzariaId, credencialId, qc]);
 
   return query;
 }
