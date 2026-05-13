@@ -51,7 +51,11 @@ export class SyncWorkerService implements OnModuleInit {
       this.logger.error(`claim_sync_job: ${error.message}`);
       return null;
     }
-    return Array.isArray(data) ? data[0] : data;
+    const row = Array.isArray(data) ? data[0] : data;
+    // A função SQL retorna uma row com todos os campos null quando não há job
+    // (porque RETURNING não preenche v_job quando o UPDATE não afeta linhas).
+    if (!row || !row.id) return null;
+    return row;
   }
 
   private async processJob(job: any) {
