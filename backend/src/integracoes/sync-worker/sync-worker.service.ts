@@ -7,6 +7,12 @@ import { CardapioWebImporterService, ImportProgress } from '../cardapioweb/carda
 const STUCK_JOB_THRESHOLD_MIN = 15;
 const PROGRESS_DEBOUNCE_MS = 2000;
 
+// Parse 'YYYY-MM-DD' como data local (evita conversão UTC que recua um dia em BRT)
+function parseDateLocal(s: string): Date {
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
 @Injectable()
 export class SyncWorkerService implements OnModuleInit {
   private readonly logger = new Logger(SyncWorkerService.name);
@@ -74,8 +80,8 @@ export class SyncWorkerService implements OnModuleInit {
     try {
       const result = await this.importer.importarPeriodo(
         job.credencial_id,
-        new Date(job.periodo_inicio),
-        new Date(job.periodo_fim),
+        parseDateLocal(job.periodo_inicio),
+        parseDateLocal(job.periodo_fim),
         onProgress,
       );
 
