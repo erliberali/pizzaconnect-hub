@@ -40,7 +40,10 @@ export default function Integracoes() {
     return currentPizzaria ? (getUserRole(currentPizzaria.id) ?? 'leitura') : 'leitura';
   }, [isConsolidated, currentPizzaria, getUserRole, memberships]);
 
-  const pizzariaId = isConsolidated ? null : currentPizzaria?.id ?? null;
+  // super_admin sempre vê todas as credenciais (tela administrativa global);
+  // outros papéis ficam restritos à pizzaria ativa quando não consolidado.
+  const verTodas = isConsolidated || role === 'super_admin';
+  const pizzariaId = verTodas ? null : currentPizzaria?.id ?? null;
 
   const podeEditar = role === 'super_admin' || role === 'admin_pizzaria';
   const podeCriar = role === 'super_admin';
@@ -102,7 +105,7 @@ export default function Integracoes() {
                     <div className="space-y-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <Badge variant={cred.ativo ? 'default' : 'secondary'}>{cred.ativo ? 'Ativa' : 'Inativa'}</Badge>
-                        {isConsolidated && <Badge variant="outline">{pizzariaNome(cred.pizzaria_id)}</Badge>}
+                        {verTodas && <Badge variant="outline">{pizzariaNome(cred.pizzaria_id)}</Badge>}
                         <span className="text-sm font-medium">CardapioWeb #{cred.estabelecimento_externo_id}</span>
                       </div>
                       <p className="text-xs text-muted-foreground">API key: <span className="font-mono">{mascarar(cred.api_key_encrypted)}</span></p>
