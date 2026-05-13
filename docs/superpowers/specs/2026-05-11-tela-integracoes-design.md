@@ -204,7 +204,7 @@ Frontend esconde/desabilita botões; RLS no Supabase é a barreira real.
 
 ## Fora de escopo (follow-ups)
 
-- **Webhook receiver CardapioWeb**: edge function `cardapioweb-webhook` com validação HMAC, idempotência via `event_external_id`, atualização de `pedido`.
+- **Webhook receiver CardapioWeb**: edge function `cardapioweb-webhook` com validação HMAC, idempotência via `event_external_id`, atualização de `pedido`. **Razão extra:** `/orders/history` da API só arquiva pedidos com 1-2 dias de delay, então sync manual histórico não pega o dia atual. Webhook é o único caminho confiável pra tempo real (alternativa: usar `/orders` como fallback no importer, mas só retorna últimos ~24-48h sem range, complica idempotência).
 - **AES-256 real para `api_key_encrypted`**: pgsodium ou Supabase Vault.
 - **Botão "Testar conexão"**: edge function leve que valida API key contra `/orders/history`.
 - **Cancelamento de job em andamento**: campo `cancel_requested` + verificação no worker entre páginas.
