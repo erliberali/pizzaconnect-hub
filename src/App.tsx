@@ -11,6 +11,9 @@ import Dashboard from "@/pages/Dashboard";
 import Pedidos from "@/pages/Pedidos";
 import Integracoes from "@/pages/Integracoes";
 import Usuarios from "@/pages/Usuarios";
+import Fornecedores from "@/pages/Fornecedores";
+import Produtos from "@/pages/Produtos";
+import NotasCompra from "@/pages/NotasCompra";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +44,9 @@ const App = () => (
               <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/pedidos" element={<Pedidos />} />
+                <Route path="/fornecedores" element={<Fornecedores />} />
+                <Route path="/produtos" element={<Produtos />} />
+                <Route path="/notas-compra" element={<NotasCompra />} />
                 <Route path="/integracoes" element={<Integracoes />} />
                 <Route path="/usuarios" element={<Usuarios />} />
               </Route>

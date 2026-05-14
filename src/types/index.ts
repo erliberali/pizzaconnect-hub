@@ -35,10 +35,11 @@ export interface IntegracaoCredencial {
   pizzaria_id: string;
   origem: 'cardapioweb';
   estabelecimento_externo_id: string;
-  token_encrypted: string;
-  webhook_secret?: string;
+  api_key_encrypted: string | null;
+  partner_key_encrypted?: string | null;
+  webhook_secret?: string | null;
   ativo: boolean;
-  last_sync_at?: string;
+  last_sync_at?: string | null;
   created_at: string;
 }
 
@@ -81,6 +82,7 @@ export interface Pedido {
   updated_at_origem: string;
   created_at: string;
   itens?: PedidoItem[];
+  pizzaria?: { id: string; nome: string } | null;
 }
 
 export interface PedidoItem {
@@ -94,6 +96,113 @@ export interface PedidoItem {
   total: number;
   observacoes?: string;
   modificadores?: Record<string, unknown>;
+}
+
+export type SyncJobStatus = 'queued' | 'running' | 'completed' | 'failed';
+
+export interface SyncJob {
+  id: string;
+  credencial_id: string;
+  pizzaria_id: string;
+  periodo_inicio: string; // YYYY-MM-DD
+  periodo_fim: string;
+  status: SyncJobStatus;
+  total_pages: number | null;
+  current_page: number | null;
+  total_count: number | null;
+  processed_count: number;
+  imported_count: number;
+  updated_count: number;
+  error_count: number;
+  error_message: string | null;
+  created_by: string | null;
+  created_at: string;
+  started_at: string | null;
+  finished_at: string | null;
+}
+
+// ---------- Compras / Estoque ----------
+
+export interface Fornecedor {
+  id: string;
+  pizzaria_id: string | null; // NULL = compartilhado entre todas (rotulado "Ambas")
+  razao_social: string;
+  nome_fantasia: string | null;
+  cnpj: string | null;
+  contato: string | null;
+  email: string | null;
+  telefone: string | null;
+  ativo: boolean;
+  criado_em: string;
+}
+
+export interface ProdutoEstoque {
+  id: string;
+  pizzaria_id: string | null; // NULL = compartilhado entre todas ("Ambas")
+  sku: string | null;
+  nome: string;
+  unidade: string; // 'un' | 'kg' | 'g' | 'l' | 'ml' | etc (livre)
+  categoria: string | null;
+  custo_medio: number;
+  estoque_minimo: number;
+  controla_lote: boolean;
+  controla_validade: boolean;
+  ativo: boolean;
+  criado_em: string;
+}
+
+export type DepositoTipo = 'principal' | 'geladeira' | 'freezer' | 'outro';
+
+export interface Deposito {
+  id: string;
+  pizzaria_id: string;
+  nome: string;
+  tipo: DepositoTipo;
+  ativo: boolean;
+  criado_em: string;
+}
+
+export type CategoriaTipo = 'custo_fixo' | 'custo_variavel' | 'imposto' | 'outro';
+
+export interface CategoriaDespesa {
+  id: string;
+  pizzaria_id: string;
+  nome: string;
+  tipo: CategoriaTipo;
+}
+
+export type NotaCompraStatus = 'rascunho' | 'lancada' | 'cancelada';
+
+export interface NotaCompraItem {
+  id: string;
+  nota_id: string;
+  produto_id: string;
+  deposito_id: string;
+  lote_numero: string | null;
+  validade: string | null; // YYYY-MM-DD
+  quantidade: number;
+  custo_unitario: number;
+  valor_total?: number; // generated column
+  produto?: { id: string; nome: string; unidade: string } | null;
+}
+
+export interface NotaCompra {
+  id: string;
+  pizzaria_id: string;
+  fornecedor_id: string;
+  numero: string;
+  serie: string | null;
+  data_emissao: string; // YYYY-MM-DD
+  data_entrada: string;
+  valor_total: number;
+  valor_frete: number;
+  valor_desconto: number;
+  status: NotaCompraStatus;
+  observacao: string | null;
+  usuario_id: string | null;
+  criado_em: string;
+  fornecedor?: { id: string; razao_social: string } | null;
+  itens?: NotaCompraItem[];
 }
 
 // Dashboard KPIs

@@ -1,0 +1,2 @@
+ALTER TABLE sync_job REPLICA IDENTITY FULL;
+ALTER PUBLICATION supabase_realtime ADD TABLE sync_job;

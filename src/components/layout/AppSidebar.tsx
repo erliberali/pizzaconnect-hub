@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import {
-  LayoutDashboard, ShoppingBag, Link2, Users, LogOut, Pizza, ChevronDown, Building2
+  LayoutDashboard, ShoppingBag, Link2, Users, LogOut, Pizza, ChevronDown, Building2,
+  Truck, Package, FileText
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTenant } from '@/contexts/TenantContext';
@@ -18,6 +19,9 @@ import { cn } from '@/lib/utils';
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/pedidos', label: 'Pedidos', icon: ShoppingBag },
+  { to: '/fornecedores', label: 'Fornecedores', icon: Truck },
+  { to: '/produtos', label: 'Produtos', icon: Package },
+  { to: '/notas-compra', label: 'Notas de compra', icon: FileText },
   { to: '/integracoes', label: 'Integrações', icon: Link2 },
   { to: '/usuarios', label: 'Usuários', icon: Users },
 ];
