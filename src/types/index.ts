@@ -82,6 +82,7 @@ export interface Pedido {
   updated_at_origem: string;
   created_at: string;
   itens?: PedidoItem[];
+  pizzaria?: { id: string; nome: string } | null;
 }
 
 export interface PedidoItem {
