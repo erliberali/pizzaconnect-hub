@@ -9,7 +9,7 @@ export function usePizzarias() {
       const { data, error } = await supabase
         .from('pizzaria')
         .select('*')
-        .eq('status', 'ativo')
+        .eq('status', 'ativa')
         .order('nome');
       if (error) throw error;
       return (data ?? []) as Pizzaria[];

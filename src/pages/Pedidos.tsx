@@ -9,8 +9,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTenant } from '@/contexts/TenantContext';
 import { usePedidos } from '@/hooks/usePedidos';
+import { usePedidosResumo } from '@/hooks/usePedidosResumo';
+import { usePizzarias } from '@/hooks/usePizzarias';
 import type { Pedido, PedidoStatus, PedidoCanal } from '@/types';
 import { Search, Eye } from 'lucide-react';
+
+function isoDateOffset(daysAgo: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  return d.toISOString().slice(0, 10);
+}
 
 const statusVariant: Record<PedidoStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   novo: 'outline',
@@ -41,16 +49,35 @@ const canalLabel: Record<PedidoCanal, string> = {
 
 export default function Pedidos() {
   const { currentPizzaria, isConsolidated } = useTenant();
+  const { data: pizzarias = [] } = usePizzarias();
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterCanal, setFilterCanal] = useState<string>('all');
+  const [filterPizzariaId, setFilterPizzariaId] = useState<string>('all');
+  const [dateStart, setDateStart] = useState<string>(isoDateOffset(6));
+  const [dateEnd, setDateEnd] = useState<string>(isoDateOffset(0));
   const [selectedPedido, setSelectedPedido] = useState<Pedido | null>(null);
 
+  const pizzariaIdParam = isConsolidated
+    ? (filterPizzariaId !== 'all' ? filterPizzariaId : null)
+    : (currentPizzaria?.id ?? null);
+
   const { data: pedidos = [], isLoading, error } = usePedidos({
-    pizzariaId: isConsolidated ? null : currentPizzaria?.id,
+    pizzariaId: pizzariaIdParam,
     filterStatus,
     filterCanal,
     search,
+    dateStart,
+    dateEnd,
+  });
+
+  const { data: resumo } = usePedidosResumo({
+    pizzariaId: pizzariaIdParam,
+    filterStatus,
+    filterCanal,
+    search,
+    dateStart,
+    dateEnd,
   });
 
   const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -61,8 +88,24 @@ export default function Pedidos() {
       <div>
         <h1 className="text-2xl font-display font-bold">Pedidos</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          {isLoading ? 'Carregando...' : `${pedidos.length} pedidos encontrados`}
+          {isLoading ? 'Carregando...' : `Exibindo ${pedidos.length} de ${resumo?.count ?? '—'} pedidos no filtro`}
         </p>
+      </div>
+
+      {/* Resumo */}
+      <div className="grid grid-cols-2 gap-3 max-w-md">
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <p className="text-xs text-muted-foreground">Pedidos</p>
+            <p className="text-2xl font-display font-bold mt-1">{resumo?.count ?? 0}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <p className="text-xs text-muted-foreground">Valor total</p>
+            <p className="text-2xl font-display font-bold mt-1">{fmt(resumo?.totalLiquido ?? 0)}</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filters */}
@@ -85,6 +128,23 @@ export default function Pedidos() {
             {Object.entries(canalLabel).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
           </SelectContent>
         </Select>
+        {isConsolidated && (
+          <Select value={filterPizzariaId} onValueChange={setFilterPizzariaId}>
+            <SelectTrigger className="w-[200px]"><SelectValue placeholder="Pizzaria" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas Pizzarias</SelectItem>
+              {pizzarias.map(p => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        )}
+        <div className="flex items-center gap-1">
+          <span className="text-xs text-muted-foreground">De</span>
+          <Input type="date" value={dateStart} onChange={e => setDateStart(e.target.value)} className="w-[150px]" />
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="text-xs text-muted-foreground">Até</span>
+          <Input type="date" value={dateEnd} onChange={e => setDateEnd(e.target.value)} className="w-[150px]" />
+        </div>
       </div>
 
       {error && (
@@ -98,6 +158,7 @@ export default function Pedidos() {
             <TableHeader>
               <TableRow>
                 <TableHead>Pedido</TableHead>
+                <TableHead>Pizzaria</TableHead>
                 <TableHead>Cliente</TableHead>
                 <TableHead>Canal</TableHead>
                 <TableHead>Status</TableHead>
@@ -110,7 +171,7 @@ export default function Pedidos() {
               {isLoading
                 ? Array.from({ length: 8 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 7 }).map((_, j) => (
+                      {Array.from({ length: 8 }).map((_, j) => (
                         <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
                       ))}
                     </TableRow>
@@ -118,6 +179,7 @@ export default function Pedidos() {
                 : pedidos.map(p => (
                     <TableRow key={p.id}>
                       <TableCell className="font-mono text-xs">{p.pedido_externo_id}</TableCell>
+                      <TableCell><Badge variant="outline">{p.pizzaria?.nome ?? p.pizzaria_id.slice(0, 8)}</Badge></TableCell>
                       <TableCell>{p.cliente_nome ?? '-'}</TableCell>
                       <TableCell><Badge variant="outline">{canalLabel[p.canal]}</Badge></TableCell>
                       <TableCell><Badge variant={statusVariant[p.status]}>{statusLabel[p.status]}</Badge></TableCell>
@@ -145,6 +207,7 @@ export default function Pedidos() {
           {selectedPedido && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3 text-sm">
+                <div><span className="text-muted-foreground">Pizzaria:</span> {selectedPedido.pizzaria?.nome ?? '—'}</div>
                 <div><span className="text-muted-foreground">Status:</span> <Badge variant={statusVariant[selectedPedido.status]}>{statusLabel[selectedPedido.status]}</Badge></div>
                 <div><span className="text-muted-foreground">Canal:</span> {canalLabel[selectedPedido.canal]}</div>
                 <div><span className="text-muted-foreground">Cliente:</span> {selectedPedido.cliente_nome}</div>

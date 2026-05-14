@@ -2,6 +2,9 @@
   "name": "pizzaconnect-backend",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "dev": "nest start --watch",
     "build": "nest build",
@@ -33,5 +36,10 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.6.0"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@nestjs/testing": "^10.4.22",
+    "@types/jest": "^30.0.0",
+    "jest": "^30.4.2",
+    "ts-jest": "^29.4.9"
+  }
 }
