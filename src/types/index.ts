@@ -121,6 +121,90 @@ export interface SyncJob {
   finished_at: string | null;
 }
 
+// ---------- Compras / Estoque ----------
+
+export interface Fornecedor {
+  id: string;
+  pizzaria_id: string | null; // NULL = compartilhado entre todas (rotulado "Ambas")
+  razao_social: string;
+  nome_fantasia: string | null;
+  cnpj: string | null;
+  contato: string | null;
+  email: string | null;
+  telefone: string | null;
+  ativo: boolean;
+  criado_em: string;
+}
+
+export interface ProdutoEstoque {
+  id: string;
+  pizzaria_id: string | null; // NULL = compartilhado entre todas ("Ambas")
+  sku: string | null;
+  nome: string;
+  unidade: string; // 'un' | 'kg' | 'g' | 'l' | 'ml' | etc (livre)
+  categoria: string | null;
+  custo_medio: number;
+  estoque_minimo: number;
+  controla_lote: boolean;
+  controla_validade: boolean;
+  ativo: boolean;
+  criado_em: string;
+}
+
+export type DepositoTipo = 'principal' | 'geladeira' | 'freezer' | 'outro';
+
+export interface Deposito {
+  id: string;
+  pizzaria_id: string;
+  nome: string;
+  tipo: DepositoTipo;
+  ativo: boolean;
+  criado_em: string;
+}
+
+export type CategoriaTipo = 'custo_fixo' | 'custo_variavel' | 'imposto' | 'outro';
+
+export interface CategoriaDespesa {
+  id: string;
+  pizzaria_id: string;
+  nome: string;
+  tipo: CategoriaTipo;
+}
+
+export type NotaCompraStatus = 'rascunho' | 'lancada' | 'cancelada';
+
+export interface NotaCompraItem {
+  id: string;
+  nota_id: string;
+  produto_id: string;
+  deposito_id: string;
+  lote_numero: string | null;
+  validade: string | null; // YYYY-MM-DD
+  quantidade: number;
+  custo_unitario: number;
+  valor_total?: number; // generated column
+  produto?: { id: string; nome: string; unidade: string } | null;
+}
+
+export interface NotaCompra {
+  id: string;
+  pizzaria_id: string;
+  fornecedor_id: string;
+  numero: string;
+  serie: string | null;
+  data_emissao: string; // YYYY-MM-DD
+  data_entrada: string;
+  valor_total: number;
+  valor_frete: number;
+  valor_desconto: number;
+  status: NotaCompraStatus;
+  observacao: string | null;
+  usuario_id: string | null;
+  criado_em: string;
+  fornecedor?: { id: string; razao_social: string } | null;
+  itens?: NotaCompraItem[];
+}
+
 // Dashboard KPIs
 export interface DashboardKPIs {
   pedidos_dia: number;
